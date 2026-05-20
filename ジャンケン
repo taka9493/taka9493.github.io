@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ワクワク！じゃんけんバトル Canvas</title>
+    <!-- Tailwind CSS for elegant design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for rounded, cute Japanese typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kosugi Maru', 'Plus Jakarta Sans', sans-serif;
+        }
+        /* Custom scrollbar for explanation panel */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+<!-- メインヘッダー -->
+<header class="bg-white border-b border-slate-200 py-4 px-6 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="text-3xl animate-bounce">✊✌️🖐️</div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    ワクワク！じゃんけんバトル
+                </h1>
+                <p class="text-xs text-slate-500">Canvasアニメーション ＆ 初心者向けコード学習システム</p>
+            </div>
+        </div>
+        <div class="flex gap-2 text-sm">
+            <span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full font-semibold border border-indigo-100 flex items-center gap-1">
+                <span>連勝数:</span>
+                <span id="streak-badge" class="font-bold text-base">0</span>
+            </span>
+            <button onclick="resetScore()" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition duration-200 flex items-center gap-1">
+                🔄 スコアをリセット
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- メインコンテンツ -->
+<main class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- 左側：ゲーム画面（Canvas）と操作ボタン -->
+    <section class="lg:col-span-7 flex flex-col gap-4">
+        <!-- Canvas コンテナ -->
+        <div class="bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 rounded-2xl shadow-xl overflow-hidden relative flex flex-col items-center justify-center p-2 min-h-[350px] md:min-h-[420px]">
+            <!-- 水平スコア表示 (Canvasの上部に浮かせる) -->
+            <div class="absolute top-4 left-4 right-4 flex justify-between text-white font-semibold text-sm z-10 bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>あなた: <span id="player-score-txt" class="text-emerald-400 font-bold text-base">0</span> 勝</span>
+                </div>
+                <div class="text-slate-300">引き分け: <span id="draw-score-txt" class="font-bold">0</span></div>
+                <div class="flex items-center gap-2">
+                    <span>あいて: <span id="cpu-score-txt" class="text-rose-400 font-bold text-base">0</span> 勝</span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400 animate-pulse"></span>
+                </div>
+            </div>
+
+            <!-- Canvas 本体 -->
+            <canvas id="janken-canvas" class="w-full max-w-full rounded-xl" style="aspect-ratio: 4/3;"></canvas>
+
+            <!-- 状態表示バッジ -->
+            <div id="status-overlay" class="absolute bottom-4 bg-white/10 backdrop-blur-md text-white border border-white/20 px-4 py-1.5 rounded-full text-xs font-semibold select-none">
+                対戦相手を待っています...
+            </div>
+        </div>
+
+        <!-- 操作ボタンエリア -->
+        <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-100">
+            <h2 class="text-center font-bold text-slate-700 mb-4 flex items-center justify-center gap-2">
+                <span>👇 あなたの手を選んでください</span>
+            </h2>
+            <div class="grid grid-cols-3 gap-3 md:gap-4">
+                <!-- グー -->
+                <button onclick="selectHand('gu')" id="btn-gu" class="group relative bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-4 flex flex-col items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all duration-200 overflow-hidden">
+                    <span class="text-3xl md:text-4xl group-hover:scale-125 transition duration-300">✊</span>
+                    <span class="font-bold text-sm md:text-base">グー (Gu)</span>
+                    <span class="absolute right-2 bottom-1 text-[10px] text-amber-200">1</span>
+                </button>
+                <!-- チョキ -->
+                <button onclick="selectHand('choki')" id="btn-choki" class="group relative bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl py-4 flex flex-col items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all duration-200 overflow-hidden">
+                    <span class="text-3xl md:text-4xl group-hover:scale-125 transition duration-300">✌️</span>
+                    <span class="font-bold text-sm md:text-base">チョキ (Choki)</span>
+                    <span class="absolute right-2 bottom-1 text-[10px] text-emerald-200">2</span>
+                </button>
+                <!-- パー -->
+                <button onclick="selectHand('pa')" id="btn-pa" class="group relative bg-sky-500 hover:bg-sky-600 text-white rounded-2xl py-4 flex flex-col items-center justify-center gap-2 shadow-lg shadow-sky-500/20 active:scale-95 transition-all duration-200 overflow-hidden">
+                    <span class="text-3xl md:text-4xl group-hover:scale-125 transition duration-300">🖐️</span>
+                    <span class="font-bold text-sm md:text-base">パー (Pa)</span>
+                    <span class="absolute right-2 bottom-1 text-[10px] text-sky-200">3</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 右側：初心者向け解説パネル -->
+    <section class="lg:col-span-5 flex flex-col gap-4">
+        <div class="bg-white rounded-2xl shadow-md border border-slate-100 flex flex-col h-full max-h-[600px] lg:max-h-none">
+            <!-- タブ切り替え -->
+            <div class="border-b border-slate-100 flex">
+                <button id="tab-explanation" onclick="switchTab('explanation')" class="flex-1 py-3 text-center text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 transition-all">
+                    💡 プログラム解説
+                </button>
+                <button id="tab-log" onclick="switchTab('log')" class="flex-1 py-3 text-center text-sm font-bold text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all">
+                    📜 対戦履歴
+                </button>
+            </div>
+
+            <!-- 解説パネルの中身 -->
+            <div id="panel-explanation" class="p-5 overflow-y-auto flex-grow flex flex-col gap-4">
+                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3.5 text-xs text-indigo-800 leading-relaxed">
+                    <h3 class="font-bold text-sm mb-1">💡 Canvasで描くとは？</h3>
+                    <p>
+                        このアプリは、静的なHTML要素を並べるのではなく、JavaScriptを使って、1秒間に60回（毎秒60フレーム）画面の消去と描画を繰り返してアニメーションを作っています（<strong>ゲームループ</strong>）。
+                    </p>
+                </div>
+
+                <!-- ステップ別コードハイライト -->
+                <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-900 text-slate-100">
+                    <div class="bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-400 flex justify-between items-center border-b border-slate-700">
+                        <span>現在実行されているロジック</span>
+                        <span id="logic-badge" class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded text-[10px]">待機中</span>
+                    </div>
+                    <div class="p-3 text-xs font-mono overflow-x-auto leading-relaxed">
+                        <!-- コードの解説用ブロック（状態に応じて動的に変化） -->
+                        <pre id="code-snippet" class="text-indigo-300">// 1. あなたが手を選ぶと、ゲームが始まります！
+const play = (playerHand) => {
+  // あい手をランダムに決定します
+  const choices = ['gu', 'choki', 'pa'];
+  const cpuHand = choices[Math.floor(Math.random() * 3)];
+  // 揺れアニメーションを開始
+  startShakeAnimation(playerHand, cpuHand);
+};</pre>
+                    </div>
+                </div>
+
+                <!-- プログラム初心者お助けメモ -->
+                <div class="space-y-3">
+                    <h4 class="font-bold text-sm text-slate-700">🔍 初心者が知っておきたいポイント</h4>
+                    
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0">1</div>
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-800">あいての手のランダム決定</h5>
+                            <p class="text-[11px] text-slate-500 mt-0.5">
+                                コンピュータの決定には <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-500">Math.random()</code> を使用します。これにより、0から0.999...の乱数が得られ、3倍して切り捨てることで 0, 1, 2（グー・チョキ・パー）が均等に選ばれます。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center font-bold text-xs shrink-0">2</div>
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-800">勝敗判定のアルゴリズム</h5>
+                            <p class="text-[11px] text-slate-500 mt-0.5">
+                                引き分け、勝ち、負けは引き算の余り（剰余演算子 <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-500">%</code>）を使うとスマートに計算できますが、このプログラムは初心者が直感的に理解しやすいよう、素直な <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-500">if / else</code> 分岐を採用しています。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs shrink-0">3</div>
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-800">紙吹雪エフェクト (粒子)</h5>
+                            <p class="text-[11px] text-slate-500 mt-0.5">
+                                勝ったときは、複数の小さなカラフルな四角形や円（粒子オブジェクト）を生成し、重力と風力、回転を毎フレーム適用しながらCanvas上に再描画することで、華やかな演出を行っています。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 履歴パネルの中身 (初期は非表示) -->
+            <div id="panel-log" class="p-5 overflow-y-auto flex-grow flex flex-col gap-3 hidden">
+                <div class="text-xs text-slate-500 flex justify-between items-center mb-1">
+                    <span>過去10回の対戦結果</span>
+                    <button onclick="clearLogs()" class="text-rose-500 hover:underline">クリア</button>
+                </div>
+                <div id="log-list" class="space-y-2 flex-grow overflow-y-auto max-h-[300px] pr-1">
+                    <p class="text-xs text-slate-400 text-center py-8">まだ対戦記録はありません。じゃんけんで遊んでみよう！</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- フッター -->
+<footer class="bg-slate-800 text-slate-400 text-xs py-4 px-6 text-center border-t border-slate-700 mt-8">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+        <span>© 2026 じゃんけんバトル Canvas! すべての初心者プログラマーを応援しています。</span>
+        <div class="flex gap-4">
+            <span class="hover:text-white transition duration-200">HTML5 Canvas</span>
+            <span class="hover:text-white transition duration-200">Tailwind CSS</span>
+            <span class="hover:text-white transition duration-200">JavaScript</span>
+        </div>
+    </div>
+</footer>
+
+<script>
+// --- ゲームデータと状態管理 ---
+let scores = {
+    player: 0,
+    cpu: 0,
+    draws: 0,
+    streak: 0
+};
+
+// ゲーム状態: 'idle'(待機中), 'shaking'(じゃんけんぽん中の揺れ), 'reveal'(結果表示)
+let gameState = 'idle';
+
+// アニメーション関連の変数
+let animationTimer = 0;
+const SHAKE_DURATION = 90; // じゃんけんぽん揺れのアニメーションフレーム数 (1.5秒相当)
+let shakeOffset = 0;
+
+let playerHand = 'gu'; // 初期表示
+let cpuHand = 'gu';
+let finalPlayerHand = 'gu';
+let finalCpuHand = 'gu';
+let battleResult = ''; // 'win', 'lose', 'draw'
+
+// パーティクル（紙吹雪）配列
+let particles = [];
+
+// 対戦履歴ログ
+let battleLogs = [];
+
+// Canvas要素の取得とコンテキストの設定
+const canvas = document.getElementById('janken-canvas');
+const ctx = canvas.getContext('2d');
+
+// --- Canvas 高解像度対応 (Retina等で滲むのを防ぐ) ---
+function setupCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    // 基準解像度 (4:3アスペクト)
+    const baseWidth = 800;
+    const baseHeight = 600;
+    
+    canvas.width = baseWidth;
+    canvas.height = baseHeight;
+}
+
+// --- パーティクル（紙吹雪）生成クラス ---
+class Particle {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = Math.random() * 8 + 6;
+        // 飛び散る初期速度
+        this.vx = (Math.random() - 0.5) * 12;
+        this.vy = (Math.random() - 0.8) * 12 - 4; // 上向きに強めに吹き飛ぶ
+        this.gravity = 0.25;
+        this.color = `hsl(${Math.random() * 360}, 90%, 60%)`;
+        this.rotation = Math.random() * 360;
+        this.rotationSpeed = (Math.random() - 0.5) * 10;
+        this.life = 1.0;
+        this.decay = Math.random() * 0.015 + 0.01;
+        this.shape = Math.random() > 0.5 ? 'circle' : 'square';
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += this.gravity;
+        this.rotation += this.rotationSpeed;
+        this.life -= this.decay;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate((this.rotation * Math.PI) / 180);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.life;
+
+        if (this.shape === 'circle') {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+        }
+
+        ctx.restore();
+    }
+}
+
+// パーティクルを一気に発生させる
+function spawnVictoryParticles() {
+    for (let i = 0; i < 80; i++) {
+        // 画面中央下部（プレイヤー側）から吹き出させる
+        particles.push(new Particle(canvas.width * 0.25, canvas.height * 0.65));
+    }
+}
+
+// --- 絵文字やアイコンの手をスマートに描画するヘルパー ---
+function getHandEmoji(hand) {
+    switch (hand) {
+        case 'gu': return '✊';
+        case 'choki': return '✌️';
+        case 'pa': return '🖐️';
+        default: return '❓';
+    }
+}
+
+function getHandLabel(hand) {
+    switch (hand) {
+        case 'gu': return 'グー';
+        case 'choki': return 'チョキ';
+        case 'pa': return 'パー';
+        default: return '';
+    }
+}
+
+// 影付きでテキストを描画する関数
+function drawShadowedText(text, x, y, font, fillStyle, shadowColor, offset = 4) {
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // 影
+    ctx.fillStyle = shadowColor;
+    ctx.fillText(text, x + offset, y + offset);
+    
+    // 手前
+    ctx.fillStyle = fillStyle;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+}
+
+// --- Canvas 描画ループ ---
+function draw() {
+    // 画面のクリア
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. 背景のグラデーション
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, '#1e1b4b'); // indigo-950
+    grad.addColorStop(0.5, '#311042'); // 暗いパープル
+    grad.addColorStop(1, '#0f172a'); // slate-900
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // デコレーション：グリッドラインをうっすら描く
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < canvas.width; i += 40) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+    }
+    for (let j = 0; j < canvas.height; j += 40) {
+        ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(canvas.width, j); ctx.stroke();
+    }
+
+    // 各陣営の土台円盤（プラットフォーム）
+    // プレイヤーの円盤（左下）
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.15)'; // emerald-500 tint
+    ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(canvas.width * 0.25, canvas.height * 0.75, 110, 45, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // CPUの円盤（右上）
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.15)'; // rose-500 tint
+    ctx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(canvas.width * 0.75, canvas.height * 0.35, 110, 45, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 2. じゃんけんの手の描画と揺れアニメーションの計算
+    let playerYOffset = 0;
+    let cpuYOffset = 0;
+
+    if (gameState === 'shaking') {
+        // サイン波を使って滑らかに上下に揺らす
+        const frequency = 0.15;
+        const amplitude = 25;
+        const shakeVal = Math.sin(animationTimer * frequency) * amplitude;
+        
+        // プレイヤーとCPUで少し揺れの位相をずらして生き生きとさせる
+        playerYOffset = shakeVal;
+        cpuYOffset = -shakeVal;
+
+        // 揺らしている間は「グー」の状態で競わせる
+        playerHand = 'gu';
+        cpuHand = 'gu';
+    } else if (gameState === 'reveal') {
+        playerHand = finalPlayerHand;
+        cpuHand = finalCpuHand;
+    }
+
+    // プレイヤーの手の描画 (左下)
+    const pX = canvas.width * 0.25;
+    const pY = canvas.height * 0.65 + playerYOffset;
+    
+    // ネームプレート(あなた)
+    ctx.fillStyle = '#10b981'; // emerald-500
+    ctx.beginPath();
+    ctx.roundRect(pX - 55, pY + 70, 110, 24, 12);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px "Kosugi Maru"';
+    ctx.textAlign = 'center';
+    ctx.fillText('あなた', pX, pY + 86);
+
+    // プレイヤーの手文字 (Emoji)
+    drawShadowedText(getHandEmoji(playerHand), pX, pY, '96px "Plus Jakarta Sans"', '#ffffff', 'rgba(0,0,0,0.3)', 6);
+
+    // CPUの手の描画 (右上)
+    const cX = canvas.width * 0.75;
+    const cY = canvas.height * 0.25 + cpuYOffset;
+
+    // ネームプレート(相手)
+    ctx.fillStyle = '#f43f5e'; // rose-500
+    ctx.beginPath();
+    ctx.roundRect(cX - 55, cY - 94, 110, 24, 12);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px "Kosugi Maru"';
+    ctx.textAlign = 'center';
+    ctx.fillText('あいて (CPU)', cX, cY - 78);
+
+    // CPUの手文字 (相手は最初は伏せておく。シャッフル中は「❓」にするなどしても面白い)
+    let displayCpuHandEmoji = getHandEmoji(cpuHand);
+    if (gameState === 'idle') {
+        displayCpuHandEmoji = '❓';
+    }
+    
+    // CPUの手文字 (Emoji) - 相手の手は反転させる（手首の方向）
+    ctx.save();
+    // 相手が右手で出しているように見せるためにX方向を反転（スケール -1）
+    ctx.translate(cX, cY);
+    ctx.scale(-1, 1);
+    drawShadowedText(displayCpuHandEmoji, 0, 0, '96px "Plus Jakarta Sans"', '#ffffff', 'rgba(0,0,0,0.3)', 6);
+    ctx.restore();
+
+    // 3. 画面中央のメインステータス表示
+    if (gameState === 'shaking') {
+        // じゃん・けん・ぽん！の文字演出
+        let callText = 'じゃん... ✊';
+        let callColor = '#eab308'; // 黄
+        if (animationTimer > SHAKE_DURATION * 0.66) {
+            callText = 'ぽん！！！ 💥';
+            callColor = '#f43f5e'; // 赤
+        } else if (animationTimer > SHAKE_DURATION * 0.33) {
+            callText = 'けん... ✌️';
+            callColor = '#a855f7'; // 紫
+        }
+        drawShadowedText(callText, canvas.width / 2, canvas.height / 2, 'bold 44px "Kosugi Maru"', callColor, 'rgba(0,0,0,0.5)', 4);
+    } 
+    
+    else if (gameState === 'reveal') {
+        // 勝敗結果のどでかいリボン
+        let bannerText = '';
+        let bannerBg = '';
+        let bannerTextStyle = '';
+
+        if (battleResult === 'win') {
+            bannerText = '✨ やった勝ち！ ✨';
+            bannerBg = 'rgba(16, 185, 129, 0.85)'; // emerald
+            bannerTextStyle = '#ffffff';
+        } else if (battleResult === 'lose') {
+            bannerText = 'あいての勝ち 😢';
+            bannerBg = 'rgba(244, 63, 94, 0.85)'; // rose
+            bannerTextStyle = '#ffffff';
+        } else {
+            bannerText = '引き分け！ 🤝';
+            bannerBg = 'rgba(100, 116, 139, 0.85)'; // slate
+            bannerTextStyle = '#ffffff';
+        }
+
+        // 結果リボンの描画
+        ctx.save();
+        ctx.fillStyle = bannerBg;
+        ctx.beginPath();
+        ctx.roundRect(canvas.width / 2 - 200, canvas.height / 2 - 40, 400, 80, 20);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+
+        // リボンの文字
+        drawShadowedText(bannerText, canvas.width / 2, canvas.height / 2, 'bold 32px "Kosugi Maru"', bannerTextStyle, 'rgba(0,0,0,0.3)', 2);
+
+        // 下部に優しく「もう一度選んでね」と出す
+        drawShadowedText('次の一手を選ぶと、もう一度対戦できます！', canvas.width / 2, canvas.height * 0.9, '14px "Kosugi Maru"', '#cbd5e1', 'rgba(0,0,0,0.4)', 1);
+    } 
+    
+    else if (gameState === 'idle') {
+        // 最初のガイド表示
+        drawShadowedText('じゃんけんを始めよう！', canvas.width / 2, canvas.height / 2 - 10, 'bold 28px "Kosugi Maru"', '#ffffff', 'rgba(0,0,0,0.4)', 3);
+        drawShadowedText('下のボタンを押すとバトル開始！', canvas.width / 2, canvas.height / 2 + 30, '15px "Kosugi Maru"', '#a5b4fc', 'rgba(0,0,0,0.3)', 2);
+    }
+
+    // 4. パーティクル（紙吹雪）の更新と描画
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw(ctx);
+        // 寿命が尽きたら削除
+        if (particles[i].life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+// --- メインのアニメーションループ関数 ---
+function gameLoop() {
+    if (gameState === 'shaking') {
+        animationTimer++;
+        if (animationTimer >= SHAKE_DURATION) {
+            // 揺らしフェーズが終了したら、最終的な結果を出す
+            revealResult();
+        }
+    }
+    
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+// --- ゲームのコアロジック（じゃんけん開始） ---
+function selectHand(choice) {
+    if (gameState === 'shaking') return; // すでに揺らしている最中はボタン連打を無視
+
+    finalPlayerHand = choice;
+    gameState = 'shaking';
+    animationTimer = 0;
+    document.getElementById('status-overlay').textContent = 'じゃん・けん・ぽん...';
+    
+    // CPUの手をランダムで決める
+    const hands = ['gu', 'choki', 'pa'];
+    finalCpuHand = hands[Math.floor(Math.random() * 3)];
+
+    // 【解説用パネル】「ランダム決定」の瞬間コードをハイライト
+    updateExplanationPanel('random', finalPlayerHand, finalCpuHand);
+}
+
+// じゃんけんぽん完了！結果発表
+function revealResult() {
+    gameState = 'reveal';
+    
+    // 勝敗判定ロジック
+    // player: 'gu', 'choki', 'pa'
+    if (finalPlayerHand === finalCpuHand) {
+        battleResult = 'draw';
+    } else if (
+        (finalPlayerHand === 'gu' && finalCpuHand === 'choki') ||
+        (finalPlayerHand === 'choki' && finalCpuHand === 'pa') ||
+        (finalPlayerHand === 'pa' && finalCpuHand === 'gu')
+    ) {
+        battleResult = 'win';
+    } else {
+        battleResult = 'lose';
+    }
+
+    // スコア管理
+    if (battleResult === 'win') {
+        scores.player++;
+        scores.streak++;
+        spawnVictoryParticles(); // 紙吹雪を飛ばす！
+        document.getElementById('status-overlay').textContent = 'やったね！大勝利！';
+    } else if (battleResult === 'lose') {
+        scores.cpu++;
+        scores.streak = 0; // 連勝ストップ
+        document.getElementById('status-overlay').textContent = 'あなたの負け！次こそ勝とう！';
+    } else {
+        scores.draws++;
+        document.getElementById('status-overlay').textContent = 'あいこ！もう一回勝負だ！';
+    }
+
+    // DOM UIの更新
+    updateUI();
+
+    // ログを追加
+    addBattleLog(finalPlayerHand, finalCpuHand, battleResult);
+
+    // 【解説用パネル】「勝敗判定」のコードをハイライト
+    updateExplanationPanel('judge', finalPlayerHand, finalCpuHand, battleResult);
+}
+
+// スコアと badges の画面反映
+function updateUI() {
+    document.getElementById('player-score-txt').textContent = scores.player;
+    document.getElementById('cpu-score-txt').textContent = scores.cpu;
+    document.getElementById('draw-score-txt').textContent = scores.draws;
+    document.getElementById('streak-badge').textContent = scores.streak;
+}
+
+// スコアのリセット
+function resetScore() {
+    scores = { player: 0, cpu: 0, draws: 0, streak: 0 };
+    updateUI();
+    document.getElementById('status-overlay').textContent = 'スコアをリセットしました。対戦をどうぞ！';
+}
+
+// --- 対戦ログシステム ---
+function addBattleLog(player, cpu, result) {
+    const timestamp = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    
+    let resultLabel = '';
+    let resultColorClass = '';
+    
+    if (result === 'win') {
+        resultLabel = '勝ち 🎉';
+        resultColorClass = 'text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded';
+    } else if (result === 'lose') {
+        resultLabel = '負け 😢';
+        resultColorClass = 'text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded';
+    } else {
+        resultLabel = '引き分け 🤝';
+        resultColorClass = 'text-slate-600 bg-slate-100 px-2 py-0.5 rounded';
+    }
+
+    const logItem = {
+        time: timestamp,
+        playerHand: getHandEmoji(player) + ' ' + getHandLabel(player),
+        cpuHand: getHandEmoji(cpu) + ' ' + getHandLabel(cpu),
+        resultLabel: resultLabel,
+        colorClass: resultColorClass
+    };
+
+    battleLogs.unshift(logItem); // 先頭に追加
+
+    // 10回分まで保持
+    if (battleLogs.length > 10) {
+        battleLogs.pop();
+    }
+
+    renderLogs();
+}
+
+// ログ一覧をDOMに描画する
+function renderLogs() {
+    const logListContainer = document.getElementById('log-list');
+    if (battleLogs.length === 0) {
+        logListContainer.innerHTML = '<p class="text-xs text-slate-400 text-center py-8">まだ対戦記録はありません。じゃんけんで遊んでみよう！</p>';
+        return;
+    }
+
+    let html = '';
+    battleLogs.forEach((log) => {
+        html += `
+            <div class="flex items-center justify-between p-2.5 border border-slate-100 rounded-xl text-xs bg-slate-50 hover:bg-slate-100 transition">
+                <span class="text-slate-400 font-mono">${log.time}</span>
+                <div class="flex gap-4">
+                    <span>あなた: <span class="font-bold">${log.playerHand}</span></span>
+                    <span>あいて: <span class="font-bold">${log.cpuHand}</span></span>
+                </div>
+                <span class="${log.colorClass}">${log.resultLabel}</span>
+            </div>
+        `;
+    });
+    logListContainer.innerHTML = html;
+}
+
+// 履歴のクリア
+function clearLogs() {
+    battleLogs = [];
+    renderLogs();
+}
+
+// タブ切り替えロジック
+function switchTab(tabName) {
+    const tabExp = document.getElementById('tab-explanation');
+    const tabLog = document.getElementById('tab-log');
+    const panelExp = document.getElementById('panel-explanation');
+    const panelLog = document.getElementById('panel-log');
+
+    if (tabName === 'explanation') {
+        tabExp.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 transition-all";
+        tabLog.className = "flex-1 py-3 text-center text-sm font-bold text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all";
+        panelExp.classList.remove('hidden');
+        panelLog.classList.add('hidden');
+    } else {
+        tabLog.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 transition-all";
+        tabExp.className = "flex-1 py-3 text-center text-sm font-bold text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all";
+        panelLog.classList.remove('hidden');
+        panelExp.classList.add('hidden');
+    }
+}
+
+// --- 初心者向けリアルタイム解説文切り替え ---
+function updateExplanationPanel(step, pHand = 'gu', cHand = 'gu', result = 'win') {
+    const badge = document.getElementById('logic-badge');
+    const snippet = document.getElementById('code-snippet');
+    const choices = ['gu', 'choki', 'pa'];
+
+    if (step === 'random') {
+        badge.textContent = '1. 乱数・手の選択';
+        badge.className = 'px-2 py-0.5 bg-yellow-500/20 text-yellow-300 rounded text-[10px]';
+        snippet.innerHTML = `// ① あなたが「${getHandLabel(pHand)} (${getHandEmoji(pHand)})」を選びました！
+const play = ("${pHand}") => {
+  const choices = ['gu', 'choki', 'pa'];
+  
+  // Math.random()は0から1未満のランダムな数字を作ります。
+  // それを3倍して、Math.floor()で小数点以下を切り捨てることで、
+  // 0, 1, 2のいずれかを完璧にランダムで決定します！
+  const randomIndex = Math.floor(Math.random() * 3); // 結果: ${choices.indexOf(cHand)}番目
+  const cpuHand = choices[randomIndex]; // 結果: "${cHand}" (${getHandEmoji(cHand)})
+
+  // じゃんけんぽんアニメーションを開始
+  startAnimation();
+};`;
+    } 
+    
+    else if (step === 'judge') {
+        badge.textContent = '2. 勝敗の判定';
+        badge.className = 'px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-[10px]';
+        
+        // 勝敗分岐の解説コードをハイライト
+        snippet.innerHTML = `// ② プレイヤー: "${pHand}" vs CPU: "${cHand}"
+// じゃんけんの勝敗ルールに従ってプログラムが自動計算します。
+
+if (playerHand === cpuHand) {
+  // "${getHandLabel(pHand)}" と "${getHandLabel(cHand)}" で同じなので...
+  result = "引き分け"; // ✅ 今回はこのロジックが選ばれました！
+} else if (
+  (playerHand === 'gu' && cpuHand === 'choki') ||
+  (playerHand === 'choki' && cpuHand === 'pa') ||
+  (playerHand === 'pa' && cpuHand === 'gu')
+) {
+  // プレイヤーが勝つ3つのパターンをチェック
+  result = "プレイヤーの勝ち！"; ${result === 'win' ? '// ✅ 今回はこのロジックが選ばれました！' : ''}
+} else {
+  // それ以外はすべてCPUの勝ち
+  result = "相手の勝ち"; ${result === 'lose' ? '// ✅ 今回はこのロジックが選ばれました！' : ''}
+}`;
+    }
+}
+
+// --- キーボード操作（アクセシビリティ対応） ---
+window.addEventListener('keydown', (e) => {
+    if (gameState === 'shaking') return;
+    
+    // キーボードの 1, 2, 3 でも手が選べます
+    if (e.key === '1') {
+        selectHand('gu');
+        triggerButtonPressEffect('btn-gu');
+    } else if (e.key === '2') {
+        selectHand('choki');
+        triggerButtonPressEffect('btn-choki');
+    } else if (e.key === '3') {
+        selectHand('pa');
+        triggerButtonPressEffect('btn-pa');
+    }
+});
+
+// キーボードが押された時に、視覚的にボタンが押された感覚（アクティブ効果）を与える
+function triggerButtonPressEffect(btnId) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.classList.add('scale-95', 'brightness-90');
+    setTimeout(() => {
+        btn.classList.remove('scale-95', 'brightness-90');
+    }, 150);
+}
+
+// ページ読み込み完了時の処理
+window.onload = function() {
+    setupCanvas();
+    
+    // 画面サイズ変更時にCanvasが適切にフィットするようにリサイズ
+    window.addEventListener('resize', () => {
+        setupCanvas();
+        draw(); // リサイズ後に一度再描画
+    });
+
+    // ゲームループ開始！
+    gameLoop();
+};
+</script>
+</body>
+</html>
